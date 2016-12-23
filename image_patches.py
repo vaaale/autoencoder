@@ -6,39 +6,47 @@ import numpy as np
 import matplotlib.image as mpimg
 
 
-def patches(data_dir='data', dim=(32, 32), scale=2, stride=1):
+def patches(data_dir='data', dim=(32, 32), scale=2, max_patches=2000):
     dim_y = (dim[0] * scale, dim[1] * scale)
     y_files = glob.glob(data_dir + '/*.jpg')
+    print('Generating....')
     while True:
         np.random.shuffle(y_files)
         for y_file in y_files:
-            print('Reading patches from ' + y_file)
+            #print('Reading patches from ' + y_file)
             y_image = mpimg.imread(y_file)
             y_shape = y_image.shape
-            x_image = imresize(y_image, (int(y_shape[0]/scale), int(y_shape[1]/scale), int(y_shape[2])))
+            if scale > 1:
+                x_image = imresize(y_image, (int(y_shape[0]/scale), int(y_shape[1]/scale), int(y_shape[2])))
+            else:
+                x_image = y_image
 
-            for m in np.arange(0, int(x_image.shape[0] - dim[0]), stride):
-                for n in np.arange(0, int(x_image.shape[1] - dim[1]), stride):
-                    patch_x = x_image[m:m + dim[1], n:n + dim[0]]
-                    patch_y = y_image[m*scale:m*scale + dim_y[1], n*scale:n*scale + dim_y[0]]
-                    yield patch_x, patch_y
+            m_dim = int(x_image.shape[0] - dim[0])
+            n_dim = int(x_image.shape[1] - dim[1])
+            for _ in np.arange(max_patches):
+                m = np.random.randint(0, m_dim)
+                n = np.random.randint(0, n_dim)
+                patch_x = x_image[m:m + dim[1], n:n + dim[0]]
+                patch_y = y_image[m*scale:m*scale + dim_y[1], n*scale:n*scale + dim_y[0]]
+                yield patch_x, patch_y
 
 
-def batch_generator(data_dir='data', dim=(28, 28), scale=2, stride=1, batch_size=128):
-    patch_generator = patches(data_dir, dim=dim, scale=scale, stride=stride)
+def batch_generator(data_dir='data', dim=(28, 28), scale=2, batch_size=128, max_patches=2000):
+    patch_generator = patches(data_dir, dim=dim, scale=scale, max_patches=max_patches)
     batch_x = []
     batch_y = []
     for x, y in patch_generator:
         batch_x.append(x)
         batch_y.append(y)
         if len(batch_x) == batch_size:
-            batch_x = np.asarray(batch_x)
-            batch_y = np.asarray(batch_y)
-            batch_x = batch_x.astype('float32') / 255.
-            batch_y = batch_y.astype('float32') / 255.
+            batch_x = np.asarray(batch_x).astype('float32') / 255.
+            batch_y = np.asarray(batch_y).astype('float32') / 255.
 
-            yield batch_x, batch_y
-            batch_x =[]
+            noise_factor = 0.25
+            batch_x_noisy = batch_x + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=batch_x.shape)
+
+            yield batch_x_noisy, batch_y
+            batch_x = []
             batch_y = []
 
 
@@ -90,7 +98,7 @@ def dataset_noisy(data_dir='data', dim=(28, 28), test_size=0.3, max_patches=1000
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     batch_size = 10
-    gen = batch_generator(dim=(128, 128), scale=4, stride=1, batch_size=batch_size)
+    gen = batch_generator(data_dir='data/train', dim=(128, 128), scale=4, stride=1, batch_size=batch_size)
     for x_train, y_train in gen:
         plt.figure(figsize=(20, 4))
         for i in range(batch_size):

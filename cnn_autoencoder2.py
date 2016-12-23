@@ -1,17 +1,18 @@
 import glob
 import os
-from keras.callbacks import RemoteMonitor, ModelCheckpoint
-from keras.layers import Input, Convolution2D, MaxPooling2D, UpSampling2D, Dropout
-from keras.models import Model
-import numpy as np
+
 import matplotlib.pyplot as plt
-from image_patches import dataset, batch_generator
+from keras.callbacks import RemoteMonitor, ModelCheckpoint
+from keras.layers import Input, Convolution2D, UpSampling2D
+from keras.models import Model
+
+from image_patches import batch_generator
 from progress_monitor import ProgressMonitor
 
 img_width = img_height = 32
 img_depth = 3
 image_dim = (img_width, img_height, img_depth)
-scale = 2
+scale = 1
 
 # x_train, x_test = dataset(dim=(image_dim[0], image_dim[1]), max_patches=50)
 # print(x_train.shape)
@@ -26,10 +27,8 @@ scale = 2
 # noise_scale = 0.1
 # x_train_noisy = x_train.copy()
 # x_test_noisy = x_test.copy()
-# x_train_noisy[:, :, :, nose_channel] += np.random.normal(loc=noise_mean, scale=noise_scale,
-#                                                                         size=(len(x_train_noisy), img_width, img_height))
-# x_test_noisy[:, :, :, nose_channel] += np.random.normal(loc=noise_mean, scale=noise_scale,
-#                                                                        size=(len(x_test_noisy), img_width, img_height))
+# x_train_noisy[:, :, :, nose_channel] += np.random.normal(loc=noise_mean, scale=noise_scale, size=(len(x_train_noisy), img_width, img_height))
+# x_test_noisy[:, :, :, nose_channel] += np.random.normal(loc=noise_mean, scale=noise_scale, size=(len(x_test_noisy), img_width, img_height))
 #
 # print(x_train_noisy.shape)
 # x_train_noisy = np.clip(x_train_noisy, 0., 1.)
@@ -47,7 +46,7 @@ scale = 2
 # plt.show()
 #
 
-def create_model(x_dim, scale):
+def SRCNN(x_dim, scale):
     input_img = Input(shape=x_dim)
 
     x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(input_img)
@@ -66,8 +65,26 @@ def create_model(x_dim, scale):
     return autoencoder
 
 
+def DeepAuto():
+    input_img = Input(shape=image_dim)
+
+    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(input_img)
+    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
+    encoded = Convolution2D(16, 3, 3, activation='relu', border_mode='same')(x)
+
+    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(encoded)
+    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
+    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
+    decoded = Convolution2D(img_depth, 3, 3, activation='sigmoid', border_mode='same')(x)
+
+    autoencoder = Model(input_img, decoded)
+    encoder = Model(input=input_img, output=encoded)
+
+    return autoencoder
+
+
 def build_model(model_dir):
-    model = create_model(image_dim, scale)
+    model = DeepAuto()
     files = glob.glob(model_dir + '/*.hdf5')
     if len(files):
         files.sort(key=os.path.getmtime, reverse=True)
@@ -86,25 +103,17 @@ filepath = "model/model-epoch-{epoch:02d}-{loss:.4f}.hdf5"
 checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, save_best_only=True, mode='min')
 remote = RemoteMonitor(root='http://localhost:9000')
 
-test_generator = batch_generator(data_dir='data/test', dim=(img_width, img_height), scale=scale, stride=1, batch_size=128)
+test_generator = batch_generator(data_dir='data/test', dim=(img_width, img_height), scale=scale, max_patches=500, batch_size=128)
 
 progress = ProgressMonitor(generator=test_generator, dim=image_dim)
 callbacks_list = [checkpoint, remote, progress]
-#callbacks_list = [checkpoint, remote]
 
-generator = batch_generator(data_dir='data/train', dim=(img_width, img_height), scale=scale, stride=1, batch_size=128)
-autoencoder.fit_generator(generator, samples_per_epoch=12800, nb_epoch=2, callbacks=callbacks_list)
-
-# autoencoder.fit(x_train_noisy, x_train,
-#                 nb_epoch=10,
-#                 batch_size=128,
-#                 shuffle=True,
-#                 validation_data=(x_test_noisy, x_test),
-#                 callbacks=callbacks_list)
+batch_size = 128
+generator = batch_generator(data_dir='data/train', dim=(img_width, img_height), scale=scale, max_patches=5000, batch_size=batch_size)
+autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=30, callbacks=callbacks_list)
 
 x_test, y_test = next(test_generator)
 decoded_imgs = autoencoder.predict(x_test)
-#decoded_imgs = autoencoder.predict_generator(generator, val_samples=10)
 
 n = 10  # how many digits we will display
 plt.figure(figsize=(20, 4))

@@ -26,30 +26,27 @@ class ProgressMonitor(Callback):
             x = self.x_test_noisy
             y = self.x_test
             decoded_imgs = self.model.predict(self.x_test_noisy)
-        img_width = self.dim[0]
-        img_height = self.dim[1]
-        img_depth = self.dim[2]
         filename = 'epoch-{epoch:02d}-{loss:.4f}.png'.format(epoch=epoch, **logs)
         n = 10  # how many digits we will display
         plt.figure(figsize=(20, 4))
         for i in range(n):
             # display original
             ax = plt.subplot(3, n, i + 1)
-            plt.imshow(x[i].reshape(img_width, img_height, img_depth))
+            plt.imshow(x[i])
             plt.gray()
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
 
             # display noisy
             ax = plt.subplot(3, n, i + 1 + n)
-            plt.imshow(y[i].reshape(img_width*2, img_height*2, img_depth))
+            plt.imshow(y[i])
             plt.gray()
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
 
             #display reconstruction
             ax = plt.subplot(3, n, i + 1 + 2 * n)
-            plt.imshow(decoded_imgs[i].reshape(img_width*2, img_height*2, img_depth))
+            plt.imshow(decoded_imgs[i])
             plt.gray()
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
