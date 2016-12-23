@@ -6,8 +6,8 @@ import numpy as np
 import matplotlib.image as mpimg
 
 
-def patches(data_dir='data', dim_x=(32, 32), scale=2, stride=1):
-    dim_y = (dim_x[0]*scale, dim_x[1]*scale)
+def patches(data_dir='data', dim=(32, 32), scale=2, stride=1):
+    dim_y = (dim[0] * scale, dim[1] * scale)
     y_files = glob.glob(data_dir + '/*.jpg')
     while True:
         np.random.shuffle(y_files)
@@ -17,25 +17,29 @@ def patches(data_dir='data', dim_x=(32, 32), scale=2, stride=1):
             y_shape = y_image.shape
             x_image = imresize(y_image, (int(y_shape[0]/scale), int(y_shape[1]/scale), int(y_shape[2])))
 
-            for m in np.arange(0, int(x_image.shape[0] - dim_x[0]), stride):
-                for n in np.arange(0, int(x_image.shape[1] - dim_x[1]), stride):
-                    patch_x = x_image[m:m + dim_x[1], n:n + dim_x[0]]
+            for m in np.arange(0, int(x_image.shape[0] - dim[0]), stride):
+                for n in np.arange(0, int(x_image.shape[1] - dim[1]), stride):
+                    patch_x = x_image[m:m + dim[1], n:n + dim[0]]
                     patch_y = y_image[m*scale:m*scale + dim_y[1], n*scale:n*scale + dim_y[0]]
                     yield patch_x, patch_y
 
 
 def batch_generator(data_dir='data', dim=(28, 28), scale=2, stride=1, batch_size=128):
-    patch_generator = patches(data_dir, dim_x=dim, scale=scale, stride=stride)
+    patch_generator = patches(data_dir, dim=dim, scale=scale, stride=stride)
     batch_x = []
     batch_y = []
     for x, y in patch_generator:
         batch_x.append(x)
         batch_y.append(y)
         if len(batch_x) == batch_size:
+            batch_x = np.asarray(batch_x)
+            batch_y = np.asarray(batch_y)
+            batch_x = batch_x.astype('float32') / 255.
+            batch_y = batch_y.astype('float32') / 255.
+
             yield batch_x, batch_y
             batch_x =[]
             batch_y = []
-
 
 
 def dataset(data_dir='data', dim=(28, 28), test_size=0.3, max_patches=10000):
