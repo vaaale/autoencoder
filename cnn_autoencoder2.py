@@ -9,72 +9,22 @@ from keras.models import Model
 from image_patches import batch_generator
 from progress_monitor import ProgressMonitor
 
-img_width = img_height = 32
+img_width = img_height = 64
 img_depth = 3
 image_dim = (img_width, img_height, img_depth)
 scale = 1
-
-# x_train, x_test = dataset(dim=(image_dim[0], image_dim[1]), max_patches=50)
-# print(x_train.shape)
-# x_train = x_train.astype('float32') / 255.
-# x_test = x_test.astype('float32') / 255.
-# x_train = np.reshape(x_train, (len(x_train), *image_dim))
-# x_test = np.reshape(x_test, (len(x_test), *image_dim))
-#
-# noise_factor = 0.2
-# nose_channel = 0
-# noise_mean = 0.0
-# noise_scale = 0.1
-# x_train_noisy = x_train.copy()
-# x_test_noisy = x_test.copy()
-# x_train_noisy[:, :, :, nose_channel] += np.random.normal(loc=noise_mean, scale=noise_scale, size=(len(x_train_noisy), img_width, img_height))
-# x_test_noisy[:, :, :, nose_channel] += np.random.normal(loc=noise_mean, scale=noise_scale, size=(len(x_test_noisy), img_width, img_height))
-#
-# print(x_train_noisy.shape)
-# x_train_noisy = np.clip(x_train_noisy, 0., 1.)
-# x_test_noisy = np.clip(x_test_noisy, 0., 1.)
-#
-# n = 10  # how many digits we will display
-# plt.figure(figsize=(20, 4))
-# for i in range(n):
-#     # display noisy
-#     ax = plt.subplot(1, n, i + 1)
-#     plt.imshow(x_test_noisy[i].reshape(img_width, img_height, img_depth))
-#     plt.gray()
-#     ax.get_xaxis().set_visible(False)
-#     ax.get_yaxis().set_visible(False)
-# plt.show()
-#
-
-def SRCNN(x_dim, scale):
-    input_img = Input(shape=x_dim)
-
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(input_img)
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
-    encoded = Convolution2D(16, 3, 3, activation='relu', border_mode='same')(x)
-
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(encoded)
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
-    x = UpSampling2D(size=(scale, scale))(x)
-    decoded = Convolution2D(img_depth, 3, 3, activation='sigmoid', border_mode='same')(x)
-
-    autoencoder = Model(input_img, decoded)
-    #encoder = Model(input=input_img, output=encoded)
-
-    return autoencoder
+batch_size = 128
 
 
 def DeepAuto():
     input_img = Input(shape=image_dim)
 
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(input_img)
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
-    encoded = Convolution2D(16, 3, 3, activation='relu', border_mode='same')(x)
+    x = Convolution2D(128, 3, 3, activation='relu', border_mode='same')(input_img)
+    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(x)
+    encoded = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
 
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(encoded)
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
-    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
+    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(encoded)
+    x = Convolution2D(128, 3, 3, activation='relu', border_mode='same')(x)
     decoded = Convolution2D(img_depth, 3, 3, activation='sigmoid', border_mode='same')(x)
 
     autoencoder = Model(input_img, decoded)
@@ -83,8 +33,20 @@ def DeepAuto():
     return autoencoder
 
 
+def SRCNN():
+    input_img = Input(shape=image_dim)
+
+    x = Convolution2D(64, 9, 9, activation='relu', border_mode='same')(input_img)
+    x = Convolution2D(32, 1, 1, activation='relu', border_mode='same')(x)
+    out = Convolution2D(3, 5, 5, activation='sigmoid', border_mode='same')(x)
+
+    autoencoder = Model(input_img, out)
+
+    return autoencoder
+
+
 def build_model(model_dir):
-    model = DeepAuto()
+    model = SRCNN()
     files = glob.glob(model_dir + '/*.hdf5')
     if len(files):
         files.sort(key=os.path.getmtime, reverse=True)
@@ -108,7 +70,6 @@ test_generator = batch_generator(data_dir='data/test', dim=(img_width, img_heigh
 progress = ProgressMonitor(generator=test_generator, dim=image_dim)
 callbacks_list = [checkpoint, remote, progress]
 
-batch_size = 128
 generator = batch_generator(data_dir='data/train', dim=(img_width, img_height), scale=scale, max_patches=5000, batch_size=batch_size)
 autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=30, callbacks=callbacks_list)
 

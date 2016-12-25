@@ -4,6 +4,7 @@ from scipy.misc import imresize
 from sklearn.feature_extraction import image
 import numpy as np
 import matplotlib.image as mpimg
+from skimage.filters import gaussian
 
 
 def patches(data_dir='data', dim=(32, 32), scale=2, max_patches=2000):
@@ -20,6 +21,17 @@ def patches(data_dir='data', dim=(32, 32), scale=2, max_patches=2000):
                 x_image = imresize(y_image, (int(y_shape[0]/scale), int(y_shape[1]/scale), int(y_shape[2])))
             else:
                 x_image = y_image
+
+
+            x_image = imresize(x_image, 1 / 3)
+            #x_image = gaussian(x_image, sigma=(0.5, 0.5, 0), multichannel=True)
+            x_image = imresize(x_image, 300)
+
+            #x_image = gaussian(x_image, sigma=(3, 3, 1), multichannel=True)
+            # noise_factor = 0.15
+            # batch_x_noisy = batch_x + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=batch_x.shape)
+            x_image = x_image / 255.
+            y_image = y_image / 255.
 
             m_dim = int(x_image.shape[0] - dim[0])
             n_dim = int(x_image.shape[1] - dim[1])
@@ -39,13 +51,10 @@ def batch_generator(data_dir='data', dim=(28, 28), scale=2, batch_size=128, max_
         batch_x.append(x)
         batch_y.append(y)
         if len(batch_x) == batch_size:
-            batch_x = np.asarray(batch_x).astype('float32') / 255.
-            batch_y = np.asarray(batch_y).astype('float32') / 255.
+            batch_x = np.asarray(batch_x).astype('float32')
+            batch_y = np.asarray(batch_y).astype('float32')
 
-            noise_factor = 0.25
-            batch_x_noisy = batch_x + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=batch_x.shape)
-
-            yield batch_x_noisy, batch_y
+            yield batch_x, batch_y
             batch_x = []
             batch_y = []
 
@@ -85,7 +94,7 @@ def dataset_noisy(data_dir='data', dim=(28, 28), test_size=0.3, max_patches=1000
     x_train = np.reshape(x_train, (len(x_train), 32, 32, 3))
     x_test = np.reshape(x_test, (len(x_test), 32, 32, 3))
 
-    noise_factor = 0.25
+    noise_factor = 0.15
     x_train_noisy = x_train + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=x_train.shape)
     x_test_noisy = x_test + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=x_test.shape)
 
@@ -98,7 +107,7 @@ def dataset_noisy(data_dir='data', dim=(28, 28), test_size=0.3, max_patches=1000
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     batch_size = 10
-    gen = batch_generator(data_dir='data/train', dim=(128, 128), scale=4, stride=1, batch_size=batch_size)
+    gen = batch_generator(data_dir='data/train', dim=(64, 64), scale=4, max_patches=3, batch_size=batch_size)
     for x_train, y_train in gen:
         plt.figure(figsize=(20, 4))
         for i in range(batch_size):
@@ -106,14 +115,14 @@ if __name__ == '__main__':
             dim_y = y_train[i].shape
             # display original
             ax = plt.subplot(3, batch_size, i + 1)
-            plt.imshow(x_train[i].reshape(*dim_x))
+            plt.imshow(x_train[i])
             plt.gray()
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
 
             # display noisy
             ax = plt.subplot(3, batch_size, i + 1 + batch_size)
-            plt.imshow(y_train[i].reshape(*dim_y))
+            plt.imshow(y_train[i])
             plt.gray()
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
