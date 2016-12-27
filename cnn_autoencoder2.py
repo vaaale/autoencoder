@@ -3,50 +3,21 @@ import os
 
 import matplotlib.pyplot as plt
 from keras.callbacks import RemoteMonitor, ModelCheckpoint
-from keras.layers import Input, Convolution2D, UpSampling2D
-from keras.models import Model
 
 from image_patches import batch_generator
+from models import DeepDenoiseSR
 from progress_monitor import ProgressMonitor
 
-img_width = img_height = 64
+img_width = img_height = 32
 img_depth = 3
 image_dim = (img_width, img_height, img_depth)
 scale = 1
 batch_size = 128
 
 
-def DeepAuto():
-    input_img = Input(shape=image_dim)
-
-    x = Convolution2D(128, 3, 3, activation='relu', border_mode='same')(input_img)
-    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(x)
-    encoded = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
-
-    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(encoded)
-    x = Convolution2D(128, 3, 3, activation='relu', border_mode='same')(x)
-    decoded = Convolution2D(img_depth, 3, 3, activation='sigmoid', border_mode='same')(x)
-
-    autoencoder = Model(input_img, decoded)
-    encoder = Model(input=input_img, output=encoded)
-
-    return autoencoder
-
-
-def SRCNN():
-    input_img = Input(shape=image_dim)
-
-    x = Convolution2D(64, 9, 9, activation='relu', border_mode='same')(input_img)
-    x = Convolution2D(32, 1, 1, activation='relu', border_mode='same')(x)
-    out = Convolution2D(3, 5, 5, activation='sigmoid', border_mode='same')(x)
-
-    autoencoder = Model(input_img, out)
-
-    return autoencoder
-
 
 def build_model(model_dir):
-    model = SRCNN()
+    model = DeepDenoiseSR(image_dim)
     files = glob.glob(model_dir + '/*.hdf5')
     if len(files):
         files.sort(key=os.path.getmtime, reverse=True)
@@ -59,19 +30,20 @@ def build_model(model_dir):
 
 autoencoder = build_model('model')
 
-autoencoder.compile(optimizer='adam', loss='mse')
 
 filepath = "model/model-epoch-{epoch:02d}-{loss:.4f}.hdf5"
-checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, save_best_only=True, mode='min')
+checkpoint = ModelCheckpoint(filepath, monitor='val_PSNRLoss', save_best_only=True,
+                                                   mode='max', save_weights_only=True, verbose=1)
 remote = RemoteMonitor(root='http://localhost:9000')
 
-test_generator = batch_generator(data_dir='data/test', dim=(img_width, img_height), scale=scale, max_patches=500, batch_size=128)
+test_generator = batch_generator(data_dir='data2/test', dim=(img_width, img_height), scale=scale, max_patches=500, batch_size=128)
+val_generator = batch_generator(data_dir='data2/test', dim=(img_width, img_height), scale=scale, max_patches=500, batch_size=128)
 
 progress = ProgressMonitor(generator=test_generator, dim=image_dim)
 callbacks_list = [checkpoint, remote, progress]
 
-generator = batch_generator(data_dir='data/train', dim=(img_width, img_height), scale=scale, max_patches=5000, batch_size=batch_size)
-autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=30, callbacks=callbacks_list)
+generator = batch_generator(data_dir='data2/train', dim=(img_width, img_height), scale=scale, max_patches=5000, batch_size=batch_size)
+hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=40, callbacks=callbacks_list, validation_data=val_generator, nb_val_samples=batch_size*100)
 
 x_test, y_test = next(test_generator)
 decoded_imgs = autoencoder.predict(x_test)

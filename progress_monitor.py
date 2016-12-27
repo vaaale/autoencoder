@@ -2,12 +2,38 @@ from keras.callbacks import Callback
 import matplotlib.pyplot as plt
 
 
+class TrainingHistory(Callback):
+    def __init__(self, y=None, x=None, generator=None):
+        super().__init__()
+        self.x = x
+        self.y = y
+        self.generator = generator
+
+    def on_train_begin(self, logs={}):
+        self.losses = []
+        self.predictions = []
+        self.i = 0
+        self.save_every = 50
+
+    def on_batch_end(self, batch, logs={}):
+        if self.generator is not None:
+            x, y = next(self.generator)
+        else:
+            x = self.x
+
+        self.losses.append(logs.get('loss'))
+        self.i += 1
+        if self.i % self.save_every == 0:
+            pred = self.model.predict(x)
+            self.predictions.append(pred)
+
+
 class ProgressMonitor(Callback):
 
-    def __init__(self, x_test=None, x_test_noisy=None, generator=None, dim=(32, 32, 3)):
+    def __init__(self, y=None, x=None, generator=None, dim=(32, 32, 3)):
         super().__init__()
-        self.x_test = x_test
-        self.x_test_noisy = x_test_noisy
+        self.x_test = y
+        self.x_test_noisy = x
         self.generator = generator
         self.dim = dim
         pass
@@ -26,6 +52,7 @@ class ProgressMonitor(Callback):
             x = self.x_test_noisy
             y = self.x_test
             decoded_imgs = self.model.predict(self.x_test_noisy)
+
         filename = 'epoch-{epoch:02d}-{loss:.4f}.png'.format(epoch=epoch, **logs)
         n = 10  # how many digits we will display
         plt.figure(figsize=(20, 4))

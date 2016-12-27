@@ -5,6 +5,7 @@ from sklearn.feature_extraction import image
 import numpy as np
 import matplotlib.image as mpimg
 from skimage.filters import gaussian
+from scipy.ndimage.filters import gaussian_filter
 
 
 def patches(data_dir='data', dim=(32, 32), scale=2, max_patches=2000):
@@ -22,12 +23,15 @@ def patches(data_dir='data', dim=(32, 32), scale=2, max_patches=2000):
             else:
                 x_image = y_image
 
+            # Apply Gaussian Blur to Y
+            x_image = gaussian_filter(x_image, sigma=0.5)
+            x_image = imresize(x_image, 1/2, interp='bicubic')
+            x_image = imresize(x_image, 200, interp='bicubic')
 
-            x_image = imresize(x_image, 1 / 3)
-            #x_image = gaussian(x_image, sigma=(0.5, 0.5, 0), multichannel=True)
-            x_image = imresize(x_image, 300)
 
-            #x_image = gaussian(x_image, sigma=(3, 3, 1), multichannel=True)
+            #x_image = imresize(x_image, 1 / 3)
+            #x_image = imresize(x_image, 300)
+
             # noise_factor = 0.15
             # batch_x_noisy = batch_x + noise_factor * np.random.normal(loc=0.0, scale=1.0, size=batch_x.shape)
             x_image = x_image / 255.
@@ -107,7 +111,7 @@ def dataset_noisy(data_dir='data', dim=(28, 28), test_size=0.3, max_patches=1000
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     batch_size = 10
-    gen = batch_generator(data_dir='data/train', dim=(64, 64), scale=4, max_patches=3, batch_size=batch_size)
+    gen = batch_generator(data_dir='z:\\Transport\\images\\train', dim=(64, 64), scale=4, max_patches=3, batch_size=batch_size)
     for x_train, y_train in gen:
         plt.figure(figsize=(20, 4))
         for i in range(batch_size):

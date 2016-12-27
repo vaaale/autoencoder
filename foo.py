@@ -5,7 +5,11 @@ from scipy.misc import imresize
 from skimage.filters import gaussian
 import numpy as np
 import matplotlib.image as mpimg
+from matplotlib import colors
 
+
+def rgb2gray(rgb):
+    return np.dot(rgb[...,:3], [0.299, 0.587, 0.114])
 
 def normalize(arr):
     """
@@ -25,14 +29,16 @@ def normalize(arr):
 
 face = mpimg.imread('data/train/img3.jpg')
 
-print(face.shape)
-
 face = np.asarray(face).astype('float32') / 255.
 shrunk = imresize(face, 1/3)
-shrunk = gaussian(shrunk, sigma=(0.5, 0.5, 0), multichannel=True)
+shrunk = gaussian(shrunk, sigma=(0.2, 0.2, 0.7), multichannel=True)
 enlarged = imresize(shrunk, 300)
 
 print(face.shape)
+
+hsv = colors.rgb_to_hsv(face)
+print(hsv.shape)
+
 
 plt.figure()
 ax = plt.subplot(2, 2, 1)

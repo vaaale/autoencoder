@@ -77,7 +77,7 @@ autoencoder.compile(optimizer='adam', loss='mse')
 filepath = "model/model-epoch-{epoch:02d}-{loss:.4f}.hdf5"
 checkpoint = ModelCheckpoint(filepath, monitor='loss', verbose=1, save_best_only=True, mode='min')
 remote = RemoteMonitor(root='http://localhost:9000')
-progress = ProgressMonitor(x_test=x_test, x_test_noisy=x_test_noisy, dim=image_dim)
+progress = ProgressMonitor(y=x_test, x=x_test_noisy, dim=image_dim)
 callbacks_list = [checkpoint, remote, progress]
 
 autoencoder.fit(x_train_noisy, x_train,
