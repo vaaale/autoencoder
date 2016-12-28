@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from keras.callbacks import RemoteMonitor, ModelCheckpoint
 
-from image_patches import batch_generator
+from image_patches import batch_generator, stream_patches
 from models import DeepDenoiseSR
 from progress_monitor import ProgressMonitor
 
@@ -13,7 +13,6 @@ img_depth = 3
 image_dim = (img_width, img_height, img_depth)
 scale = 1
 batch_size = 128
-
 
 
 def build_model(model_dir):
@@ -36,14 +35,17 @@ checkpoint = ModelCheckpoint(filepath, monitor='val_PSNRLoss', save_best_only=Tr
                                                    mode='max', save_weights_only=True, verbose=1)
 remote = RemoteMonitor(root='http://localhost:9000')
 
-test_generator = batch_generator(data_dir='data2/test', dim=(img_width, img_height), scale=scale, max_patches=500, batch_size=128)
-val_generator = batch_generator(data_dir='data2/test', dim=(img_width, img_height), scale=scale, max_patches=500, batch_size=128)
+# test_generator = batch_generator(data_dir='../../data2/test', dim=(img_width, img_height), max_patches=500, batch_size=128)
+# val_generator = batch_generator(data_dir='../../data2/test', dim=(img_width, img_height), max_patches=500, batch_size=128)
+#generator = batch_generator(data_dir='../../data2/train', dim=(img_width, img_height), max_patches=5000, batch_size=batch_size)
+generator = stream_patches(data_dir='../../data2/patches/train', batch_size=batch_size)
+val_generator = stream_patches(data_dir='../../data2/patches/test', batch_size=batch_size)
+test_generator = stream_patches(data_dir='../../data2/patches/test', batch_size=batch_size)
 
 progress = ProgressMonitor(generator=test_generator, dim=image_dim)
 callbacks_list = [checkpoint, remote, progress]
 
-generator = batch_generator(data_dir='data2/train', dim=(img_width, img_height), scale=scale, max_patches=5000, batch_size=batch_size)
-hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=40, callbacks=callbacks_list, validation_data=val_generator, nb_val_samples=batch_size*100)
+hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=30, callbacks=callbacks_list, validation_data=val_generator, nb_val_samples=batch_size*100)
 
 x_test, y_test = next(test_generator)
 decoded_imgs = autoencoder.predict(x_test)
