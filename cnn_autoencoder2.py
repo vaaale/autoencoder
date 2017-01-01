@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from keras.callbacks import RemoteMonitor, ModelCheckpoint
 
 from image_patches import batch_generator, stream_patches
-from models import DeepDenoiseSR
+from models import DeepDenoiseSR, DeepAuto, DeepDenoiseSR2
 from progress_monitor import ProgressMonitor
 
 img_width = img_height = 32
@@ -15,8 +15,8 @@ scale = 1
 batch_size = 128
 
 
-def build_model(model_dir):
-    model = DeepDenoiseSR(image_dim)
+def build_model(model_dir, type):
+    model = type(image_dim)
     files = glob.glob(model_dir + '/*.hdf5')
     if len(files):
         files.sort(key=os.path.getmtime, reverse=True)
@@ -27,7 +27,7 @@ def build_model(model_dir):
     return model
 
 
-autoencoder = build_model('model')
+autoencoder = build_model('model', DeepDenoiseSR)
 
 
 filepath = "model/model-epoch-{epoch:02d}-{loss:.4f}.hdf5"
@@ -45,7 +45,8 @@ test_generator = stream_patches(data_dir='../../data2/patches/test', batch_size=
 progress = ProgressMonitor(generator=test_generator, dim=image_dim)
 callbacks_list = [checkpoint, remote, progress]
 
-hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=30, callbacks=callbacks_list, validation_data=val_generator, nb_val_samples=batch_size*100)
+hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=30, callbacks=callbacks_list,
+                                 validation_data=val_generator, nb_val_samples=batch_size*100)
 
 x_test, y_test = next(test_generator)
 decoded_imgs = autoencoder.predict(x_test)
