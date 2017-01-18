@@ -35,12 +35,9 @@ checkpoint = ModelCheckpoint(filepath, monitor='val_PSNRLoss', save_best_only=Tr
                                                    mode='max', save_weights_only=True, verbose=1)
 remote = RemoteMonitor(root='http://localhost:9000')
 
-# test_generator = batch_generator(data_dir='../../data2/test', dim=(img_width, img_height), max_patches=500, batch_size=128)
-# val_generator = batch_generator(data_dir='../../data2/test', dim=(img_width, img_height), max_patches=500, batch_size=128)
-#generator = batch_generator(data_dir='../../data2/train', dim=(img_width, img_height), max_patches=5000, batch_size=batch_size)
-generator = stream_patches(data_dir='../../data2/patches/train', batch_size=batch_size)
-val_generator = stream_patches(data_dir='../../data2/patches/test', batch_size=batch_size)
-test_generator = stream_patches(data_dir='../../data2/patches/test', batch_size=batch_size)
+generator = stream_patches(data_dir='/home/alex/Pictures/people/train', batch_size=batch_size)
+val_generator = stream_patches(data_dir='/home/alex/Pictures/people/test', batch_size=batch_size)
+test_generator = stream_patches(data_dir='/home/alex/Pictures/people/test', batch_size=batch_size)
 
 progress = ProgressMonitor(generator=test_generator, dim=image_dim)
 callbacks_list = [checkpoint, remote, progress]

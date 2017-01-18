@@ -51,25 +51,33 @@ def batch_generator(data_dir='data', dim=(28, 28), batch_size=128, max_patches=2
             batch_y = []
 
 
-def build_dataset(data_dir='data', target_dir='../../data2/patches', dim=(32, 32), max_patches=2000):
-    generator = patches(data_dir=data_dir, dim=dim, max_patches=max_patches)
-    i = 0
-    for x, y in generator:
-        mpimg.imsave(target_dir + '/x/patch_{:d}.jpg'.format(i), x)
-        mpimg.imsave(target_dir + '/y/patch_{:d}.jpg'.format(i), y)
-        i += 1
+def build_dataset(data_dir='data', dim=(32, 32), max_patches=2000, rebuild=False):
+    if not os.path.isdir(data_dir + '/patches/x'):
+        os.makedirs(data_dir+'/patches/x')
+        rebuild = True
+    if not os.path.isdir(data_dir + '/patches/y'):
+        os.makedirs(data_dir+'/patches/y')
+        rebuild = True
+
+    if rebuild:
+        generator = patches(data_dir=data_dir, dim=dim, max_patches=max_patches)
+        i = 0
+        for x, y in generator:
+            mpimg.imsave(data_dir + '/patches/x/patch_{:d}.jpg'.format(i), x)
+            mpimg.imsave(data_dir + '/patches/y/patch_{:d}.jpg'.format(i), y)
+            i += 1
 
 
 def stream_patches(data_dir='../../data2/patches', batch_size=128):
-    file_names = [f for f in sorted(os.listdir(data_dir + "/x/"))]
+    file_names = [f for f in sorted(os.listdir(data_dir + "/patches/x/"))]
 
     batch_x = []
     batch_y = []
     while True:
         np.random.shuffle(file_names)
         for file in file_names:
-            x_image = mpimg.imread(data_dir + '/x/' + file) / 255.
-            y_image = mpimg.imread(data_dir + '/y/' + file) / 255.
+            x_image = mpimg.imread(data_dir + '/patches/x/' + file) / 255.
+            y_image = mpimg.imread(data_dir + '/patches/y/' + file) / 255.
             batch_x.append(x_image)
             batch_y.append(y_image)
             if len(batch_x) == batch_size:
@@ -82,14 +90,13 @@ def stream_patches(data_dir='../../data2/patches', batch_size=128):
 
 
 if __name__ == '__main__':
-    build_dataset(data_dir='../../data2/train', target_dir='../../data2/patches/train', max_patches=500)
-    build_dataset(data_dir='../../data2/test', target_dir='../../data2/patches/test', max_patches=500)
+    build_dataset(data_dir='/home/alex/Pictures/people/train', max_patches=500)
+    build_dataset(data_dir='/home/alex/Pictures/people/test', max_patches=500)
     #stream_patches()
 
     import matplotlib.pyplot as plt
     batch_size = 10
-    #gen = batch_generator(data_dir='z:\\Transport\\images\\train', dim=(32, 32), max_patches=3, batch_size=batch_size)
-    gen = stream_patches(data_dir='../../data2/patches/test', batch_size=batch_size)
+    gen = stream_patches(data_dir='/home/alex/Pictures/people/train', batch_size=batch_size)
     for x_train, y_train in gen:
         plt.figure(figsize=(20, 4))
         for i in range(batch_size):

@@ -34,7 +34,7 @@ def DeepAuto(image_dim):
     decoded = Convolution2D(channels, 3, 3, activation='sigmoid', border_mode='same')(x)
 
     autoencoder = Model(input_img, decoded)
-    autoencoder.compile(optimizer='adam', loss='mse', metrics=[PSNRLoss])
+    autoencoder.compile(optimizer='adam', loss='mse', metrics=[])
 
     return autoencoder
 
@@ -47,7 +47,7 @@ def SRCNN(image_dim):
     out = Convolution2D(3, 5, 5, activation='sigmoid', border_mode='same')(x)
 
     autoencoder = Model(input_img, out)
-    autoencoder.compile(optimizer='adam', loss='mse', metrics=[PSNRLoss])
+    autoencoder.compile(optimizer='adam', loss='mse', metrics=[])
 
     return autoencoder
 
@@ -93,7 +93,7 @@ def DeepDenoiseSR(image_dim):
     model = Model(input_img, decoded)
 
     adam = optimizers.Adam(lr=1e-3)
-    model.compile(optimizer=adam, loss='mse', metrics=[PSNRLoss])
+    model.compile(optimizer=adam, loss='mse', metrics=[])
 
     return model
 
@@ -133,7 +133,7 @@ def DeepDenoiseSR2(image_dim):
     model = Model(input_img, decoded)
 
     adam = optimizers.Adam(lr=1e-3)
-    model.compile(optimizer=adam, loss='mse', metrics=[PSNRLoss])
+    model.compile(optimizer=adam, loss='mse', metrics=[])
 
     return model
 
