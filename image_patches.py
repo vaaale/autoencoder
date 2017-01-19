@@ -9,7 +9,7 @@ from scipy.ndimage.filters import gaussian_filter
 def patches(data_dir='data', dim=(32, 32), scale=2, max_patches=2000, infinite=False):
     lr_patch_dim = (int(dim[0] / scale), int(dim[1] / scale))
     y_files = glob.glob(data_dir + '/*.jpg')
-    print('Generating....')
+    print('Generating.... ' + data_dir)
     while True:
         np.random.shuffle(y_files)
         for y_file in y_files:
@@ -67,8 +67,10 @@ def build_dataset(data_dir='data', dim=(32, 32), max_patches=2000, rebuild=False
             mpimg.imsave(data_dir + '/patches/y/patch_{:d}.jpg'.format(i), y)
             i += 1
 
+def default_no_noise(image):
+    return image
 
-def stream_patches(data_dir='../../data2/patches', batch_size=128):
+def stream_patches(data_dir='../../data2/patches', batch_size=128, noise_fn=default_no_noise):
     full_path = data_dir + "/patches/x/"
     if not os.path.isdir(full_path):
         build_dataset(data_dir=data_dir, max_patches=500)
@@ -82,10 +84,10 @@ def stream_patches(data_dir='../../data2/patches', batch_size=128):
         for file in file_names:
             x_image = mpimg.imread(data_dir + '/patches/x/' + file) / 255.
             y_image = mpimg.imread(data_dir + '/patches/y/' + file) / 255.
-            # noise = np.random.rand(32, 23)
-            width, height, channels = x_image.shape
-            x_image = x_image[:, :, 0:channels] * np.asarray(np.random.rand(height, width, 1) > 0.1, dtype='float32')
-            #x_image = x_image[x_image < 0.1] = 1.
+            # width, height, channels = x_image.shape
+            # x_image = x_image[:, :, 0:channels] * np.asarray(np.random.rand(height, width, 1) > 0.07, dtype='float32')
+            #np.place(x_image, x_image == 0., 1)
+            x_image = noise_fn(x_image)
             batch_x.append(x_image)
             batch_y.append(y_image)
             if len(batch_x) == batch_size:
@@ -98,13 +100,13 @@ def stream_patches(data_dir='../../data2/patches', batch_size=128):
 
 
 if __name__ == '__main__':
-    build_dataset(data_dir='/home/alex/Pictures/people/train', max_patches=500, rebuild=True)
-    build_dataset(data_dir='/home/alex/Pictures/people/test', max_patches=500, rebuild=True)
+    build_dataset(data_dir='../../Pictures/people/train', max_patches=500, rebuild=True)
+    build_dataset(data_dir='../../Pictures/people/test', max_patches=500, rebuild=True)
     #stream_patches()
 
     import matplotlib.pyplot as plt
     batch_size = 10
-    gen = stream_patches(data_dir='/home/alex/Pictures/people/train', batch_size=batch_size)
+    gen = stream_patches(data_dir='../../Pictures/people/test', batch_size=batch_size)
     for x_train, y_train in gen:
         plt.figure(figsize=(20, 4))
         for i in range(batch_size):

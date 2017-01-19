@@ -1,11 +1,11 @@
 import glob
 import os
-
+import numpy as np
 import matplotlib.pyplot as plt
-from keras.callbacks import RemoteMonitor, ModelCheckpoint
+from keras.callbacks import RemoteMonitor, ModelCheckpoint, TensorBoard
 
 from image_patches import batch_generator, stream_patches
-from models import DeepDenoiseSR, DeepAuto, DeepDenoiseSR2
+from models import DeepDenoiseSR, DeepAuto, DeepDenoiseSR2, SRCNN
 from progress_monitor import ProgressMonitor
 
 img_width = img_height = 32
@@ -27,20 +27,30 @@ def build_model(model_dir, type):
     return model
 
 
-autoencoder = build_model('model', DeepDenoiseSR)
+autoencoder = build_model('model', SRCNN)
 
 
-filepath = "model/model-epoch-{epoch:02d}-{loss:.4f}.hdf5"
-checkpoint = ModelCheckpoint(filepath, monitor='val_PSNRLoss', save_best_only=True,
-                                                   mode='max', save_weights_only=True, verbose=1)
-remote = RemoteMonitor(root='http://localhost:9000')
+#filepath = "model/model-epoch-{epoch:02d}-{loss:.4f}.hdf5"
+filepath = "model/srcnn.hdf5"
+checkpoint = ModelCheckpoint(filepath, monitor='loss', save_best_only=True,
+                                                   mode='min', save_weights_only=True, verbose=1)
+#remote = RemoteMonitor(root='http://localhost:9000')
 
-generator = stream_patches(data_dir='/home/alex/Pictures/people/train', batch_size=batch_size)
-val_generator = stream_patches(data_dir='/home/alex/Pictures/people/test', batch_size=batch_size)
-test_generator = stream_patches(data_dir='/home/alex/Pictures/people/test', batch_size=batch_size)
+
+def gen_noise(x_image):
+    width, height, channels = x_image.shape
+    x_image = x_image[:, :, 0:channels] * np.asarray(np.random.rand(height, width, 1) > 0.07, dtype='float32')
+    np.place(x_image, x_image == 0., 1)
+    return x_image
+
+
+generator = stream_patches(data_dir='../../Pictures/people/train', batch_size=batch_size, noise_fn=gen_noise)
+val_generator = stream_patches(data_dir='../../Pictures/people/test', batch_size=batch_size, noise_fn=gen_noise)
+test_generator = stream_patches(data_dir='../../Pictures/people/test', batch_size=batch_size, noise_fn=gen_noise)
 
 progress = ProgressMonitor(generator=test_generator, dim=image_dim)
-callbacks_list = [checkpoint, remote, progress]
+tb = TensorBoard(log_dir='./logs', histogram_freq=1, write_graph=True, write_images=True)
+callbacks_list = [checkpoint, progress, tb]
 
 hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size*500, nb_epoch=30, callbacks=callbacks_list,
                                  validation_data=val_generator, nb_val_samples=batch_size*100)
