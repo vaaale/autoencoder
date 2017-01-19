@@ -25,9 +25,9 @@ def patches(data_dir='data', dim=(32, 32), scale=2, max_patches=2000, infinite=F
                 n = np.random.randint(0, n_dim)
                 patch_x = x_image[m:m + dim[1], n:n + dim[0]]
                 patch_y = patch_x
-                patch_x = gaussian_filter(patch_x, sigma=0.5)
-                patch_x = imresize(patch_x, lr_patch_dim, interp='bicubic')
-                patch_x = imresize(patch_x, dim, interp='bicubic')
+                #patch_x = gaussian_filter(patch_x, sigma=0.5)
+                ##patch_x = imresize(patch_x, lr_patch_dim, interp='bicubic')
+                ##patch_x = imresize(patch_x, dim, interp='bicubic')
                 #patch_x = patch_x + 0.2 * patch_x*np.random.normal(loc=0.0, scale=0.5, size=patch_x.shape)
 
                 yield patch_x, patch_y
@@ -69,7 +69,11 @@ def build_dataset(data_dir='data', dim=(32, 32), max_patches=2000, rebuild=False
 
 
 def stream_patches(data_dir='../../data2/patches', batch_size=128):
-    file_names = [f for f in sorted(os.listdir(data_dir + "/patches/x/"))]
+    full_path = data_dir + "/patches/x/"
+    if not os.path.isdir(full_path):
+        build_dataset(data_dir=data_dir, max_patches=500)
+
+    file_names = [f for f in sorted(os.listdir(full_path))]
 
     batch_x = []
     batch_y = []
@@ -78,6 +82,9 @@ def stream_patches(data_dir='../../data2/patches', batch_size=128):
         for file in file_names:
             x_image = mpimg.imread(data_dir + '/patches/x/' + file) / 255.
             y_image = mpimg.imread(data_dir + '/patches/y/' + file) / 255.
+            # noise = np.random.rand(32, 23)
+            width, height, channels = x_image.shape
+            x_image = x_image[:, :, 0:channels] * np.asarray(np.random.rand(height, width, 1) > 0.1, dtype='float32')
             batch_x.append(x_image)
             batch_y.append(y_image)
             if len(batch_x) == batch_size:
@@ -90,8 +97,8 @@ def stream_patches(data_dir='../../data2/patches', batch_size=128):
 
 
 if __name__ == '__main__':
-    build_dataset(data_dir='/home/alex/Pictures/people/train', max_patches=500)
-    build_dataset(data_dir='/home/alex/Pictures/people/test', max_patches=500)
+    build_dataset(data_dir='/home/alex/Pictures/people/train', max_patches=500, rebuild=True)
+    build_dataset(data_dir='/home/alex/Pictures/people/test', max_patches=500, rebuild=True)
     #stream_patches()
 
     import matplotlib.pyplot as plt
