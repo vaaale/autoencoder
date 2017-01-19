@@ -85,6 +85,7 @@ def stream_patches(data_dir='../../data2/patches', batch_size=128):
             # noise = np.random.rand(32, 23)
             width, height, channels = x_image.shape
             x_image = x_image[:, :, 0:channels] * np.asarray(np.random.rand(height, width, 1) > 0.1, dtype='float32')
+            #x_image = x_image[x_image < 0.1] = 1.
             batch_x.append(x_image)
             batch_y.append(y_image)
             if len(batch_x) == batch_size:
