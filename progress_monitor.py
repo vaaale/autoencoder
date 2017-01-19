@@ -30,12 +30,13 @@ class TrainingHistory(Callback):
 
 class ProgressMonitor(Callback):
 
-    def __init__(self, y=None, x=None, generator=None, dim=(32, 32, 3)):
+    def __init__(self, y=None, x=None, generator=None, path='logs', dim=(32, 32, 3)):
         super().__init__()
         self.x_test = y
         self.x_test_noisy = x
         self.generator = generator
         self.dim = dim
+        self.path = path
         pass
 
     def on_train_begin(self, logs={}):
@@ -53,7 +54,7 @@ class ProgressMonitor(Callback):
             y = self.x_test
             decoded_imgs = self.model.predict(self.x_test_noisy)
 
-        filename = 'epoch-{epoch:02d}-{loss:.4f}.png'.format(epoch=epoch, **logs)
+        filename = self.path + '/epoch-{epoch:02d}-{loss:.4f}.png'.format(epoch=epoch, **logs)
         n = 10  # how many digits we will display
         plt.figure(figsize=(20, 4))
         for i in range(n):
