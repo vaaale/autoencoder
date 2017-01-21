@@ -30,7 +30,7 @@ class TrainingHistory(Callback):
 
 class ProgressMonitor(Callback):
 
-    def __init__(self, y=None, x=None, generator=None, path='logs', dim=(32, 32, 3)):
+    def __init__(self, y=None, x=None, generator=None, path='.', dim=(32, 32, 3)):
         super().__init__()
         self.x_test = y
         self.x_test_noisy = x
