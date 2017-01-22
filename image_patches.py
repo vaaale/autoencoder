@@ -158,9 +158,7 @@ if __name__ == '__main__':
         height, width, channels = x_image.shape
         for m in np.arange(0, height, cell_size):
             for n in np.arange(0, width, cell_size):
-                x_image[m:m + cell_size, n:n + cell_size, 0] = x_image[m:m + cell_size, n:n + cell_size, 0].mean()
-                x_image[m:m + cell_size, n:n + cell_size, 1] = x_image[m:m + cell_size, n:n + cell_size, 1].mean()
-                x_image[m:m + cell_size, n:n + cell_size, 2] = x_image[m:m + cell_size, n:n + cell_size, 2].mean()
+                x_image[m:m + cell_size, n:n + cell_size] = x_image[m:m + cell_size, n:n + cell_size].mean(axis=(0, 1))
         return gen_noise(x_image)
 
 

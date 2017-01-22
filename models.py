@@ -51,6 +51,18 @@ def SRCNN(image_dim):
 
     return autoencoder
 
+def SRCNN1618(image_dim):
+    input_img = Input(shape=image_dim)
+
+    x = Convolution2D(512, 16, 16, activation='relu', border_mode='same')(input_img)
+    x = Convolution2D(512, 1, 1, activation='relu', border_mode='same')(x)
+    out = Convolution2D(3, 8, 8, activation='sigmoid', border_mode='same')(x)
+
+    autoencoder = Model(input_img, out)
+    autoencoder.compile(optimizer='adam', loss='mse', metrics=[])
+
+    return autoencoder
+
 
 def DeepDenoiseSR(image_dim):
     channels = 3

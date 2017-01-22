@@ -2,17 +2,16 @@ import glob
 import os
 
 import matplotlib.pyplot as plt
-import numpy as np
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from dataset import stream_patches_live
-from models import SRCNN
+from models import SRCNN, SRCNN1618
 from progress_monitor import ProgressMonitor
 
-img_width = img_height = 32
+img_width = img_height = 64
 img_depth = 3
 image_dim = (img_width, img_height, img_depth)
-batch_size = 128
+batch_size = 64
 
 
 def build_model(model_dir, type):
@@ -27,42 +26,22 @@ def build_model(model_dir, type):
     return model
 
 
-def gen_noise(x_image):
-    width, height, channels = x_image.shape
-    x_image = x_image[:, :, 0:channels] * np.asarray(np.random.rand(height, width, 1) > 0.07, dtype='float32')
-    np.place(x_image, x_image == 0., np.random.random_sample())
-    return x_image
-
-
-def pixelfy(x_image):
-    cell_size = 2
-    height, width, channels = x_image.shape
-    for m in np.arange(0, height, cell_size):
-        for n in np.arange(0, width, cell_size):
-            x_image[m:m + cell_size, n:n + cell_size, 0] = x_image[m:m + cell_size, n:n + cell_size, 0].mean()
-            x_image[m:m + cell_size, n:n + cell_size, 1] = x_image[m:m + cell_size, n:n + cell_size, 1].mean()
-            x_image[m:m + cell_size, n:n + cell_size, 2] = x_image[m:m + cell_size, n:n + cell_size, 2].mean()
-    return gen_noise(x_image)
-
 
 if __name__ == '__main__':
-    autoencoder = build_model('model', SRCNN)
-    generator = stream_patches_live(data_dir='../../Pictures/people/train', dim=(32, 32), batch_size=batch_size,
-                                    noise_fn=pixelfy)
-    val_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(32, 32), batch_size=batch_size,
-                                        noise_fn=pixelfy)
-    test_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(32, 32), batch_size=batch_size,
-                                         noise_fn=pixelfy)
+    autoencoder = build_model('model', SRCNN1618)
+    generator = stream_patches_live(data_dir='../../Pictures/people/train', dim=(64, 64), batch_size=batch_size)
+    val_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size)
+    test_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size)
 
     progress = ProgressMonitor(generator=test_generator, dim=image_dim)
     tb = TensorBoard(log_dir='./logs', histogram_freq=1, write_graph=True, write_images=True)
-    checkpoint = ModelCheckpoint('model/srcnn-{epoch:02d}.hdf5', monitor='loss', save_best_only=True,
+    checkpoint = ModelCheckpoint('model/srcnn-{epoch:02d}.hdf5', monitor='val_loss', save_best_only=True,
                                  mode='min', save_weights_only=True, verbose=1)
 
     callbacks_list = [checkpoint, progress, tb]
 
-    hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size * 500, nb_epoch=100, callbacks=callbacks_list,
-                                     validation_data=None, nb_val_samples=batch_size * 100, verbose=1,
+    hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size * 500, nb_epoch=200, callbacks=callbacks_list,
+                                     validation_data=val_generator, nb_val_samples=batch_size * 100, verbose=1,
                                      nb_worker=1)
 
     x_test, y_test = next(test_generator)

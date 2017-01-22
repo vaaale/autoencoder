@@ -1,6 +1,7 @@
 import glob
 
 import time
+
 from scipy.misc import imresize
 import numpy as np
 import matplotlib.image as mpimg
@@ -43,13 +44,11 @@ def pixelfy(x_image):
     height, width, channels = x_image.shape
     for m in np.arange(0, height, cell_size):
         for n in np.arange(0, width, cell_size):
-            x_image[m:m + cell_size, n:n + cell_size, 0] = x_image[m:m + cell_size, n:n + cell_size, 0].mean()
-            x_image[m:m + cell_size, n:n + cell_size, 1] = x_image[m:m + cell_size, n:n + cell_size, 1].mean()
-            x_image[m:m + cell_size, n:n + cell_size, 2] = x_image[m:m + cell_size, n:n + cell_size, 2].mean()
+            x_image[m:m + cell_size, n:n + cell_size] = x_image[m:m + cell_size, n:n + cell_size].mean(axis=(0, 1))
     return gen_noise(x_image)
 
 
-def producer(data_dir, dim, scale, max_patches, q):
+def producer(p_idx, data_dir, dim, scale, max_patches, q):
     generator = patchify(data_dir=data_dir, dim=dim, scale=scale, max_patches=max_patches, infinite=True)
     while True:
         x_image, y_image = next(generator)
@@ -59,41 +58,38 @@ def producer(data_dir, dim, scale, max_patches, q):
         q.put((x_image, y_image))
 
 
-def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size=128, max_patches=500, scale=2,
-                        noise_fn=None):
-    q = Queue(10)
+def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size=128, max_patches=500, scale=2, nb_workers=3):
+    q = Queue(2000)
 
-    p1 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    p2 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    p3 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    # p4 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    # p5 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    p1.start()
-    p2.start()
-    p3.start()
-    # p4.start()
-    # p5.start()
+    [Process(target=producer, args=(p_idx, data_dir, dim, scale, max_patches, q)).start() for p_idx in np.arange(nb_workers)]
 
-    batch_x = []
-    batch_y = []
+    # p1 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
+    # p2 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
+    # p3 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
+    # # p4 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
+    # # p5 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
+    # p1.start()
+    # p2.start()
+    # p3.start()
+    # # p4.start()
+    # # p5.start()
+
     while True:
+        batch_x = []
+        batch_y = []
+        # print(q.qsize())
         for _ in np.arange(batch_size):
             start = time.time()
             x_image, y_image = q.get()
 
             batch_x.append(x_image)
             batch_y.append(y_image)
-            if len(batch_x) == batch_size:
-                # with ThreadPoolExecutor(4) as pool:
-                #     batch_x = [x for x in pool.map(noise_fn, batch_x)]
-                batch_x = np.asarray(batch_x).astype('float32')
-                batch_y = np.asarray(batch_y).astype('float32')
+        batch_x = np.asarray(batch_x).astype('float32')
+        batch_y = np.asarray(batch_y).astype('float32')
 
-                end = time.time()
-                #print('Batch generated in: ' + str(end - start))
-                yield batch_x, batch_y
-                batch_x = []
-                batch_y = []
+        end = time.time()
+        #print('Batch generated in: ' + str(end - start))
+        yield batch_x, batch_y
 
 
 if __name__ == '__main__':
