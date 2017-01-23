@@ -51,6 +51,7 @@ def SRCNN(image_dim):
 
     return autoencoder
 
+
 def SRCNN1618(image_dim):
     input_img = Input(shape=image_dim)
 

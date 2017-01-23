@@ -60,14 +60,14 @@ class ProgressMonitor(Callback):
         for i in range(n):
             # display original
             ax = plt.subplot(3, n, i + 1)
-            plt.imshow(x[i])
+            plt.imshow(y[i])
             plt.gray()
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
 
             # display noisy
             ax = plt.subplot(3, n, i + 1 + n)
-            plt.imshow(y[i])
+            plt.imshow(x[i])
             plt.gray()
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)

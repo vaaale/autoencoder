@@ -40,12 +40,12 @@ def gen_noise(x_image):
 
 
 def pixelfy(x_image):
-    cell_size = 2
+    cell_size = 3
     height, width, channels = x_image.shape
     for m in np.arange(0, height, cell_size):
         for n in np.arange(0, width, cell_size):
             x_image[m:m + cell_size, n:n + cell_size] = x_image[m:m + cell_size, n:n + cell_size].mean(axis=(0, 1))
-    return gen_noise(x_image)
+    return x_image
 
 
 def producer(p_idx, data_dir, dim, scale, max_patches, q):
