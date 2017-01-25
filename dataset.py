@@ -7,9 +7,17 @@ from multiprocessing import Process, Queue
 
 def patchify(data_dir='data', dim=(32, 32), max_patches=2000, infinite=False):
     y_files = glob.glob(data_dir + '/*.jpg')
+    np.random.shuffle(y_files)
+    y_files = y_files[:min(100, len(y_files))]
     print('Loading files...')
-    y_images = [imresize(mpimg.imread(file), (256, 256)) / 255. for file in y_files]
-    x_images = [gen_noise(image) for image in y_images]
+
+    def load(file):
+        print(file)
+        image = imresize(mpimg.imread(file), (512, 512))
+        return image
+
+    y_images = [imresize(mpimg.imread(file), (512, 512)) / 255. for file in y_files]
+    x_images = [pixelfy(gen_noise(image)) for image in y_images]
     images = list(zip(x_images, y_images))
     print('Generating.... ' + data_dir)
     while True:
@@ -81,7 +89,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     batch_size = 128
-    gen = stream_patches_live(data_dir='../../Pictures/people/test', batch_size=batch_size, dim=(32, 32), max_patches=1000)
+    gen = stream_patches_live(data_dir='../../Pictures/people/test', batch_size=batch_size, dim=(64, 64), max_patches=1000)
 
     n = 10
     for x_train, y_train in gen:
