@@ -5,13 +5,13 @@ import matplotlib.pyplot as plt
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from dataset import stream_patches_live
-from models import SRCNN, SRCNN1618
+from models import SRCNN, SRCNN1618, DeepAuto
 from progress_monitor import ProgressMonitor
 
 img_width = img_height = 64
 img_depth = 3
 image_dim = (img_width, img_height, img_depth)
-batch_size = 64
+batch_size = 128
 
 
 def build_model(model_dir, type):
@@ -26,9 +26,9 @@ def build_model(model_dir, type):
     return model
 
 
-
 if __name__ == '__main__':
-    autoencoder = build_model('model', SRCNN1618)
+    autoencoder = build_model('model', DeepAuto)
+    autoencoder.summary()
     generator = stream_patches_live(data_dir='../../Pictures/people/train', dim=(64, 64), batch_size=batch_size)
     val_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size)
     test_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size)

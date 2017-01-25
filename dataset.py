@@ -8,24 +8,23 @@ import matplotlib.image as mpimg
 from multiprocessing import Process, Queue
 
 
-def patchify(data_dir='data', dim=(32, 32), scale=2, max_patches=2000, infinite=False):
+def patchify(data_dir='data', dim=(32, 32), max_patches=2000, infinite=False):
     y_files = glob.glob(data_dir + '/*.jpg')
+    print('Loading files...')
+    y_images = [imresize(mpimg.imread(file), (256, 256)) / 255. for file in y_files]
+    x_images = [gen_noise(image) for image in y_images]
+    images = list(zip(x_images, y_images))
     print('Generating.... ' + data_dir)
     while True:
-        np.random.shuffle(y_files)
-        for y_file in y_files:
-            # print('Reading patches from ' + y_file)
-            y_image = mpimg.imread(y_file)
-            y_image = imresize(y_image, (256, 256))
-            x_image = y_image
-
+        np.random.shuffle(images)
+        for x_image, y_image in images:
             m_dim = int(x_image.shape[0] - dim[0])
             n_dim = int(x_image.shape[1] - dim[1])
             for _ in np.arange(max_patches):
                 m = np.random.randint(0, m_dim)
                 n = np.random.randint(0, n_dim)
                 patch_x = x_image[m:m + dim[1], n:n + dim[0]]
-                patch_y = patch_x
+                patch_y = y_image[m:m + dim[1], n:n + dim[0]]
 
                 yield patch_x, patch_y
         if not infinite:
@@ -48,32 +47,16 @@ def pixelfy(x_image):
     return x_image
 
 
-def producer(p_idx, data_dir, dim, scale, max_patches, q):
-    generator = patchify(data_dir=data_dir, dim=dim, scale=scale, max_patches=max_patches, infinite=True)
+def producer(p_idx, data_dir, dim, max_patches, q):
+    generator = patchify(data_dir=data_dir, dim=dim, max_patches=max_patches, infinite=True)
     while True:
         x_image, y_image = next(generator)
-        x_image = x_image / 255.
-        y_image = y_image / 255.
-        x_image = pixelfy(x_image)
         q.put((x_image, y_image))
 
 
-def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size=128, max_patches=500, scale=2, nb_workers=3):
+def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size=128, max_patches=1000, nb_workers=3):
     q = Queue(2000)
-
-    [Process(target=producer, args=(p_idx, data_dir, dim, scale, max_patches, q)).start() for p_idx in np.arange(nb_workers)]
-
-    # p1 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    # p2 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    # p3 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    # # p4 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    # # p5 = Process(target=producer, args=(data_dir, dim, scale, max_patches, q))
-    # p1.start()
-    # p2.start()
-    # p3.start()
-    # # p4.start()
-    # # p5.start()
-
+    [Process(target=producer, args=(p_idx, data_dir, dim, max_patches, q)).start() for p_idx in np.arange(nb_workers)]
     while True:
         batch_x = []
         batch_y = []
@@ -93,13 +76,10 @@ def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size
 
 
 if __name__ == '__main__':
-
-
     import matplotlib.pyplot as plt
 
     batch_size = 128
-    gen = stream_patches_live(data_dir='../../Pictures/people/test', batch_size=batch_size, dim=(32, 32),
-                              max_patches=500, noise_fn=None)
+    gen = stream_patches_live(data_dir='../../Pictures/people/test', batch_size=batch_size, dim=(32, 32), max_patches=1000)
 
     n = 10
     for x_train, y_train in gen:

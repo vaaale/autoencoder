@@ -2,15 +2,15 @@ import matplotlib.pyplot as plt
 from scipy.misc import imresize
 import numpy as np
 import matplotlib.image as mpimg
-from models import DeepDenoiseSR, SRCNN
+from models import DeepDenoiseSR, SRCNN, SRCNN1618
 from scipy.ndimage.filters import gaussian_filter
 
-p_dim = (32, 32, 3)
+p_dim = (64, 64, 3)
 
 print('Building model...')
-model = DeepDenoiseSR(p_dim)
+model = SRCNN1618(p_dim)
 print('Loadin weights...')
-model.load_weights('model/backup/DeepDenoise2-32x32-0.0008.hdf5')
+model.load_weights('model/backup/srcnn-130.hdf5')
 
 face = mpimg.imread('../../data2/test/frames-00002.jpg')
 orig = face
