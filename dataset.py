@@ -1,7 +1,4 @@
 import glob
-
-import time
-
 from scipy.misc import imresize
 import numpy as np
 import matplotlib.image as mpimg
@@ -54,24 +51,29 @@ def producer(p_idx, data_dir, dim, max_patches, q):
         q.put((x_image, y_image))
 
 
-def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size=128, max_patches=1000, nb_workers=3):
-    q = Queue(2000)
-    [Process(target=producer, args=(p_idx, data_dir, dim, max_patches, q)).start() for p_idx in np.arange(nb_workers)]
+def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size=128, max_patches=1000, nb_workers=1):
+    # To get rid of linter warning
+    generator = None
+    q = None
+    if nb_workers > 1:
+        q = Queue(2000)
+        [Process(target=producer, args=(p_idx, data_dir, dim, max_patches, q)).start() for p_idx in np.arange(nb_workers)]
+    else:
+        generator = patchify(data_dir=data_dir, dim=dim, max_patches=max_patches, infinite=True)
+
     while True:
         batch_x = []
         batch_y = []
-        # print(q.qsize())
         for _ in np.arange(batch_size):
-            start = time.time()
-            x_image, y_image = q.get()
-
+            if nb_workers > 1:
+                x_image, y_image = q.get()
+            else:
+                x_image, y_image = next(generator)
             batch_x.append(x_image)
             batch_y.append(y_image)
         batch_x = np.asarray(batch_x).astype('float32')
         batch_y = np.asarray(batch_y).astype('float32')
 
-        end = time.time()
-        #print('Batch generated in: ' + str(end - start))
         yield batch_x, batch_y
 
 

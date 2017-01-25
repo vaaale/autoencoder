@@ -14,8 +14,8 @@ image_dim = (img_width, img_height, img_depth)
 batch_size = 128
 
 
-def build_model(model_dir, type):
-    model = type(image_dim)
+def build_model(model_dir, model_type):
+    model = model_type(image_dim)
     files = glob.glob(model_dir + '/*.hdf5')
     if len(files):
         files.sort(key=os.path.getmtime, reverse=True)
