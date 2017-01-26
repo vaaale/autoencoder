@@ -39,6 +39,26 @@ def DeepAuto(image_dim):
     return autoencoder
 
 
+def DeepAuto2(image_dim):
+    channels = 3
+    input_img = Input(shape=image_dim)
+
+    x = Convolution2D(256, 3, 3, activation='relu', border_mode='same')(input_img)
+    x = Convolution2D(128, 3, 3, activation='relu', border_mode='same')(x)
+    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(x)
+    encoded = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
+
+    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(encoded)
+    x = Convolution2D(128, 3, 3, activation='relu', border_mode='same')(x)
+    x = Convolution2D(256, 3, 3, activation='relu', border_mode='same')(x)
+    decoded = Convolution2D(channels, 3, 3, activation='sigmoid', border_mode='same')(x)
+
+    autoencoder = Model(input_img, decoded)
+    autoencoder.compile(optimizer='adam', loss='mse', metrics=[])
+
+    return autoencoder
+
+
 def SRCNN(image_dim):
     input_img = Input(shape=image_dim)
 
@@ -72,14 +92,12 @@ def DeepDenoiseSR(image_dim):
     n3 = 256
 
     input_img = Input(shape=image_dim)
-    d = Dropout(0.15)(input_img)
-    c1 = Convolution2D(n1, 3, 3, activation='relu', border_mode='same')(d)
+    c1 = Convolution2D(n1, 3, 3, activation='relu', border_mode='same')(input_img)
     c1 = Convolution2D(n1, 3, 3, activation='relu', border_mode='same')(c1)
 
     x = MaxPooling2D((2, 2))(c1)
-    d = Dropout(0.15)(x)
 
-    c2 = Convolution2D(n2, 3, 3, activation='relu', border_mode='same')(d)
+    c2 = Convolution2D(n2, 3, 3, activation='relu', border_mode='same')(x)
     c2 = Convolution2D(n2, 3, 3, activation='relu', border_mode='same')(c2)
 
     x = MaxPooling2D((2, 2))(c2)
@@ -92,16 +110,14 @@ def DeepDenoiseSR(image_dim):
     c2_2 = Convolution2D(n2, 3, 3, activation='relu', border_mode='same')(c2_2)
 
     m1 = merge([c2, c2_2], mode='sum')
-    x = Dropout(0.15)(m1)
-    m1 = UpSampling2D()(x)
+    m1 = UpSampling2D()(m1)
 
     c1_2 = Convolution2D(n1, 3, 3, activation='relu', border_mode='same')(m1)
     c1_2 = Convolution2D(n1, 3, 3, activation='relu', border_mode='same')(c1_2)
 
     m2 = merge([c1, c1_2], mode='sum')
-    x = Dropout(0.15)(m2)
 
-    decoded = Convolution2D(channels, 5, 5, activation='sigmoid', border_mode='same')(x)
+    decoded = Convolution2D(channels, 5, 5, activation='sigmoid', border_mode='same')(m2)
 
     model = Model(input_img, decoded)
 

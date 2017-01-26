@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
 from dataset import stream_patches_live
-from models import SRCNN, SRCNN1618, DeepAuto
+from models import SRCNN, SRCNN1618, DeepAuto, DeepDenoiseSR
 from progress_monitor import ProgressMonitor
 
 img_width = img_height = 64
@@ -27,15 +27,15 @@ def build_model(model_dir, model_type):
 
 
 if __name__ == '__main__':
-    autoencoder = build_model('model', DeepAuto)
+    autoencoder = build_model('model', SRCNN)
     autoencoder.summary()
-    generator = stream_patches_live(data_dir='../../Pictures/people/train', dim=(64, 64), batch_size=batch_size)
-    val_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size)
-    test_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size)
+    generator = stream_patches_live(data_dir='../../Pictures/people/train', dim=(64, 64), batch_size=batch_size, max_patches=batch_size)
+    val_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size, max_patches=batch_size)
+    test_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size, max_patches=1)
 
     progress = ProgressMonitor(generator=test_generator, dim=image_dim)
     tb = TensorBoard(log_dir='./logs', histogram_freq=1, write_graph=True, write_images=True)
-    checkpoint = ModelCheckpoint('model/srcnn-{epoch:02d}.hdf5', monitor='val_loss', save_best_only=True,
+    checkpoint = ModelCheckpoint('model/model-{epoch:02d}.hdf5', monitor='val_loss', save_best_only=True,
                                  mode='min', save_weights_only=True, verbose=1)
 
     callbacks_list = [checkpoint, progress, tb]

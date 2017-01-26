@@ -1,8 +1,18 @@
 import glob
+import scipy.stats as ss
 from scipy.misc import imresize
 import numpy as np
 import matplotlib.image as mpimg
 from multiprocessing import Process, Queue
+
+
+def random_range(length, num):
+    x = np.arange(-length/2, length/2, dtype=int)
+    xU, xL = x + 0.5, x - 0.5
+    prob = ss.norm.cdf(xU, scale=length/5) - ss.norm.cdf(xL, scale=length/5)
+    prob = prob / prob.sum()  # normalize the probabilities so their sum is 1
+    nums = np.random.choice(x, size=num, p=prob)
+    return nums
 
 
 def patchify(data_dir='data', dim=(32, 32), max_patches=2000, infinite=False):
@@ -16,6 +26,7 @@ def patchify(data_dir='data', dim=(32, 32), max_patches=2000, infinite=False):
         image = imresize(mpimg.imread(file), (512, 512))
         return image
 
+    # y_images = [load(file) / 255. for file in y_files]
     y_images = [imresize(mpimg.imread(file), (512, 512)) / 255. for file in y_files]
     x_images = [pixelfy(gen_noise(image)) for image in y_images]
     images = list(zip(x_images, y_images))
@@ -26,8 +37,11 @@ def patchify(data_dir='data', dim=(32, 32), max_patches=2000, infinite=False):
             m_dim = int(x_image.shape[0] - dim[0])
             n_dim = int(x_image.shape[1] - dim[1])
             for _ in np.arange(max_patches):
-                m = np.random.randint(0, m_dim)
-                n = np.random.randint(0, n_dim)
+                np.random.normal()
+                # m = np.random.randint(0, m_dim)
+                # n = np.random.randint(0, n_dim)
+                m = int(m_dim / 2) + random_range(m_dim, 1)[0]
+                n = int(n_dim / 2) + random_range(n_dim, 1)[0]
                 patch_x = x_image[m:m + dim[1], n:n + dim[0]]
                 patch_y = y_image[m:m + dim[1], n:n + dim[0]]
 

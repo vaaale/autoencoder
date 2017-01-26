@@ -54,7 +54,7 @@ class ProgressMonitor(Callback):
             y = self.x_test
             decoded_imgs = self.model.predict(self.x_test_noisy)
 
-        filename = self.path + '/epoch-{epoch:02d}-{loss:.4f}.png'.format(epoch=epoch, **logs)
+        filename = self.path + '/epoch-{epoch:02d}-{loss:.6f}.png'.format(epoch=epoch, **logs)
         n = 10  # how many digits we will display
         plt.figure(figsize=(20, 4))
         for i in range(n):
