@@ -31,7 +31,7 @@ def patchify(data_dir='data', dim=(32, 32), max_patches=2000, infinite=False):
     x_images = [pixelfy(gen_noise(image)) for image in y_images]
     images = list(zip(x_images, y_images))
     print('Generating.... ' + data_dir)
-    while True:
+    while infinite:
         np.random.shuffle(images)
         for x_image, y_image in images:
             m_dim = int(x_image.shape[0] - dim[0])
@@ -46,8 +46,6 @@ def patchify(data_dir='data', dim=(32, 32), max_patches=2000, infinite=False):
                 patch_y = y_image[m:m + dim[1], n:n + dim[0]]
 
                 yield patch_x, patch_y
-        if not infinite:
-            break
 
 
 def gen_noise(x_image):
