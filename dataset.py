@@ -15,55 +15,51 @@ def random_range(length, num):
     return nums
 
 
-def patchify(data_dir='data', dim=(32, 32), max_patches=2000, infinite=False):
+def patchify(data_dir='data', max_files=100, dim=(32, 32), max_patches=2000, infinite=False):
     y_files = glob.glob(data_dir + '/*.jpg')
     np.random.shuffle(y_files)
-    y_files = y_files[:min(100, len(y_files))]
+    y_files = y_files[:min(max_files, len(y_files))]
     print('Loading files...')
 
     def load(file):
         print(file)
+        # image = mpimg.imread(file)
         image = imresize(mpimg.imread(file), (512, 512))
         return image
 
-    # y_images = [load(file) / 255. for file in y_files]
-    y_images = [imresize(mpimg.imread(file), (512, 512)) / 255. for file in y_files]
-    x_images = [pixelfy(gen_noise(image)) for image in y_images]
+    y_images = [load(file) / 255. for file in y_files]
+    # y_images = [imresize(mpimg.imread(file), (512, 512)) / 255. for file in y_files]
+    x_images = [pixelfy(image.copy()) for image in y_images]
     images = list(zip(x_images, y_images))
     print('Generating.... ' + data_dir)
-    while True:
+    while infinite:
         np.random.shuffle(images)
         for x_image, y_image in images:
             m_dim = int(x_image.shape[0] - dim[0])
             n_dim = int(x_image.shape[1] - dim[1])
             for _ in np.arange(max_patches):
-                np.random.normal()
-                # m = np.random.randint(0, m_dim)
-                # n = np.random.randint(0, n_dim)
                 m = int(m_dim / 2) + random_range(m_dim, 1)[0]
                 n = int(n_dim / 2) + random_range(n_dim, 1)[0]
                 patch_x = x_image[m:m + dim[1], n:n + dim[0]]
                 patch_y = y_image[m:m + dim[1], n:n + dim[0]]
 
                 yield patch_x, patch_y
-        if not infinite:
-            break
 
 
 def gen_noise(x_image):
     width, height, channels = x_image.shape
-    x_image = x_image[:, :, 0:channels] * np.asarray(np.random.rand(height, width, 1) > 0.07, dtype='float32')
+    x_image = x_image[:, :, 0:channels] * np.asarray(np.random.rand(height, width, 1) > 0.03, dtype='float32')
     np.place(x_image, x_image == 0., np.random.random_sample())
     return x_image
 
 
-def pixelfy(x_image):
+def pixelfy(image):
     cell_size = 3
-    height, width, channels = x_image.shape
+    height, width, channels = image.shape
     for m in np.arange(0, height, cell_size):
         for n in np.arange(0, width, cell_size):
-            x_image[m:m + cell_size, n:n + cell_size] = x_image[m:m + cell_size, n:n + cell_size].mean(axis=(0, 1))
-    return x_image
+            image[m:m + cell_size, n:n + cell_size] = image[m:m + cell_size, n:n + cell_size].mean(axis=(0, 1))
+    return image
 
 
 def producer(p_idx, data_dir, dim, max_patches, q):
@@ -73,7 +69,7 @@ def producer(p_idx, data_dir, dim, max_patches, q):
         q.put((x_image, y_image))
 
 
-def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size=128, max_patches=1000, nb_workers=1):
+def stream_patches_live(data_dir='../../data2/patches', max_files=100, dim=(32, 32), batch_size=128, max_patches=1000, nb_workers=1):
     # To get rid of linter warning
     generator = None
     q = None
@@ -81,7 +77,7 @@ def stream_patches_live(data_dir='../../data2/patches', dim=(32, 32), batch_size
         q = Queue(2000)
         [Process(target=producer, args=(p_idx, data_dir, dim, max_patches, q)).start() for p_idx in np.arange(nb_workers)]
     else:
-        generator = patchify(data_dir=data_dir, dim=dim, max_patches=max_patches, infinite=True)
+        generator = patchify(data_dir=data_dir, max_files=max_files, dim=dim, max_patches=max_patches, infinite=True)
 
     while True:
         batch_x = []
@@ -103,7 +99,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     batch_size = 128
-    gen = stream_patches_live(data_dir='../../Pictures/people/test', batch_size=batch_size, dim=(64, 64), max_patches=1000)
+    gen = stream_patches_live(data_dir='../../Pictures/people/test', max_files=5, batch_size=batch_size, dim=(64, 64), max_patches=128)
 
     n = 10
     for x_train, y_train in gen:

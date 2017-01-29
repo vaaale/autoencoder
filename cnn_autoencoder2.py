@@ -27,11 +27,13 @@ def build_model(model_dir, model_type):
 
 
 if __name__ == '__main__':
-    autoencoder = build_model('model', SRCNN)
+    train_path = '../../Pictures/people/train'
+    test_path = '../../Pictures/people/test'
+    autoencoder = build_model('model', DeepDenoiseSR)
     autoencoder.summary()
-    generator = stream_patches_live(data_dir='../../Pictures/people/train', dim=(64, 64), batch_size=batch_size, max_patches=batch_size)
-    val_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size, max_patches=batch_size)
-    test_generator = stream_patches_live(data_dir='../../Pictures/people/test', dim=(64, 64), batch_size=batch_size, max_patches=1)
+    generator = stream_patches_live(data_dir=train_path, max_files=100, dim=(64, 64), batch_size=batch_size, max_patches=1000)
+    val_generator = stream_patches_live(data_dir=test_path, max_files=50, dim=(64, 64), batch_size=batch_size, max_patches=1000)
+    test_generator = stream_patches_live(data_dir=test_path, max_files=50, dim=(64, 64), batch_size=batch_size, max_patches=1)
 
     progress = ProgressMonitor(generator=test_generator, dim=image_dim)
     tb = TensorBoard(log_dir='./logs', histogram_freq=1, write_graph=True, write_images=True)
@@ -40,7 +42,8 @@ if __name__ == '__main__':
 
     callbacks_list = [checkpoint, progress, tb]
 
-    hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size * 500, nb_epoch=200, callbacks=callbacks_list,
+    hist = autoencoder.fit_generator(generator, samples_per_epoch=batch_size * 500, nb_epoch=200,
+                                     callbacks=callbacks_list,
                                      validation_data=val_generator, nb_val_samples=batch_size * 100, verbose=1,
                                      nb_worker=1)
 
