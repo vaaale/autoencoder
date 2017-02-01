@@ -1,17 +1,13 @@
 import glob
+import ntpath
+import os
 
-
-import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.misc import imresize
-from models import DeepDenoiseSR, DeepAuto, DeepDenoiseSR2
-from scipy.ndimage.filters import gaussian_filter
-import ntpath
-from itertools import product
-from sklearn.feature_extraction.image import reconstruct_from_patches_2d, extract_patches_2d
 from scipy.misc import imread
-import os
+from sklearn.feature_extraction.image import reconstruct_from_patches_2d, extract_patches_2d
+
+from models import DeepDenoiseSR
 
 
 def build_model(model_dir, model_type, image_dim):
@@ -38,15 +34,14 @@ def patch_generator(patches, batch_size):
 
 patch_size = 64
 print('Building model')
-autoencoder = build_model('model', DeepDenoiseSR, (patch_size, patch_size, 3))
+autoencoder = build_model('model/DeepDenoiseSR', DeepDenoiseSR, (patch_size, patch_size, 3))
 autoencoder.summary()
 
 file = 'test.jpg'
 print(ntpath.basename(file))
 image = imread(file, mode='RGB')
 print('Image shape: {}'.format(image.shape))
-xx = imresize(image, 300)
-patches = extract_patches_2d(xx, (patch_size, patch_size))
+patches = extract_patches_2d(image, (patch_size, patch_size))
 print('Number of patches extracted: {}'.format(len(patches)))
 
 print('Predicting....')
@@ -61,7 +56,7 @@ predictions = np.concatenate(predicted_output)
 
 
 print('Reconstructing...')
-output = reconstruct_from_patches_2d(predictions, xx.shape)
+output = reconstruct_from_patches_2d(predictions, image.shape)
 
 output = output.astype('uint8')
 
