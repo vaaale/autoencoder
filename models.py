@@ -4,7 +4,8 @@ from keras.engine import merge
 from keras.layers import Input, Convolution2D, UpSampling2D, MaxPooling2D, Dropout, Flatten, Dense, Reshape
 from keras.models import Model
 import numpy as np
-
+import glob
+import os
 
 def PSNRLoss(y_true, y_pred):
     """
@@ -23,14 +24,12 @@ def DeepAuto(image_dim):
     channels = 3
     input_img = Input(shape=image_dim)
 
-    x = Convolution2D(256, 1, 1, activation='relu', border_mode='same')(input_img)
-    x = Convolution2D(128, 1, 1, activation='relu', border_mode='same')(x)
-    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(x)
-    encoded = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
+    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(input_img)
+    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(x)
+    encoded = Convolution2D(32, 1, 1, activation='relu', border_mode='same')(x)
 
-    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(encoded)
-    x = Convolution2D(128, 1, 1, activation='relu', border_mode='same')(x)
-    x = Convolution2D(256, 1, 1, activation='relu', border_mode='same')(x)
+    x = Convolution2D(32, 3, 3, activation='relu', border_mode='same')(encoded)
+    x = Convolution2D(64, 3, 3, activation='relu', border_mode='same')(x)
     decoded = Convolution2D(channels, 3, 3, activation='sigmoid', border_mode='same')(x)
 
     autoencoder = Model(input_img, decoded)
@@ -167,3 +166,12 @@ def DeepDenoiseSR2(image_dim):
     return model
 
 
+def build_model(model_dir, model_type, image_dim):
+    model = model_type(image_dim)
+    files = glob.glob(model_dir + '/*.hdf5')
+    if len(files):
+        files.sort(key=os.path.getmtime, reverse=True)
+        print('Loading model ' + files[0])
+        if os.path.isfile(files[0]):
+            model.load_weights(files[0])
+    return model

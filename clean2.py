@@ -7,7 +7,7 @@ import numpy as np
 from scipy.misc import imread
 from scipy.misc import imresize
 
-from models import DeepDenoiseSR
+from models import DeepAuto
 
 
 def build_model(model_dir, model_type, image_dim):
@@ -21,13 +21,14 @@ def build_model(model_dir, model_type, image_dim):
     return model
 
 
-file = 'test.jpg'
+file = 'data/train/leadingpeopleteams_courseimage.jpg'
 print(ntpath.basename(file))
 image = (imresize(imread(file, mode='RGB'), (480, 640)) / 255.).astype(np.float32)
 print('Image shape: {}'.format(image.shape))
 
 print('Building model')
-autoencoder = build_model('model/DeepDenoiseSR', DeepDenoiseSR, image.shape)
+# autoencoder = build_model('model', DeepAuto, image.shape)
+autoencoder = build_model('model', DeepAuto, (None, None, 3))
 autoencoder.summary()
 
 print('Predicting....')
