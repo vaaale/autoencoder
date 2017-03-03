@@ -44,6 +44,7 @@ def upload_file():
 
             print('Predicting....')
             image = (imresize(imread(os.path.join(app.config['UPLOAD_FOLDER'], filename), mode='RGB'), (480, 640)) / 255.).astype(np.float32)
+
             output = autoencoder.predict(image.astype(np.float32).reshape((1, *image.shape)))
             output = (output.reshape(image.shape) * 255).astype(np.uint8)
             imsave(os.path.join(app.config['OUTPUT_FOLDER'], filename), output)
@@ -73,4 +74,5 @@ def reconstructed_file(filename):
 
 
 if __name__ == '__main__':
-    app.run(threading=True)
+    app.secret_key = 'alex'
+    app.run(threaded=False)
