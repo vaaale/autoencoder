@@ -1176,4 +1176,4 @@ class DirectoryIterator(Iterator):
         #     x_img.save(os.path.join(self.save_to_dir, fname))
         # build batch of labels
 
-        return batch_x, batch_y
+        return [batch_x, batch_y], batch_y
