@@ -8,11 +8,11 @@ from datagenerator import ImageDataGenerator
 import matplotlib
 import matplotlib.pyplot as plt
 
-train_data_dir = 'z:/Dataset/coco/test/distorted'
-train_label_dir = 'z:/Dataset/coco/test/orig'
+train_data_dir = '/home/alex/Datasets/coco/distorted'
+train_label_dir = '/home/alex/Datasets/coco/orig'
 
-val_data_dir = 'z:/Dataset/coco/val/distorted'
-val_label_dir = 'z:/Dataset/coco/val/orig'
+val_data_dir = '/home/alex/Datasets/coco/distorted'
+val_label_dir = '/home/alex/Datasets/coco/orig'
 
 
 img_width = 224
@@ -26,7 +26,7 @@ train_gen = datagen.flow_from_directory(
         train_data_dir, train_label_dir,
         target_size=(img_width, img_height),
         batch_size=batch_size,
-        class_mode=None,
+        class_mode='input',
         shuffle=True)
 
 print('Initializing validation generator....')
@@ -34,7 +34,7 @@ val_gen = datagen.flow_from_directory(
         val_data_dir, val_label_dir,
         target_size=(img_width, img_height),
         batch_size=batch_size,
-        class_mode=None,
+        class_mode='input',
         shuffle=True)
 
 print('Initializing tensorboard generator....')
@@ -43,7 +43,7 @@ tb_gen = datagen.flow_from_directory(
         target_size=(img_width, img_height),
         batch_size=batch_size,
         class_mode=None,
-        shuffle=True)
+        shuffle='input')
 
 
 def unet(pretrained_weights=None, input_size=(256, 256, 1)):
@@ -138,11 +138,11 @@ image_dim = [img_width, img_height, 3]
 model = DeepDenoiseSR2(image_dim)
 # model.summary()
 
-tb = TensorBoard(log_dir='logs/unjpeg', histogram_freq=1, write_graph=True, write_images=True,
+tb = TensorBoard(log_dir='logs/unjpeg', histogram_freq=0, write_graph=True, write_images=True,
                  validation_data=tb_gen)
 checkpoint = ModelCheckpoint('model/unjpeg/model-{epoch:02d}-{val_loss:.6f}.hdf5', monitor='val_loss',
                              save_best_only=True,
                              mode='min', save_weights_only=True, verbose=1)
 callbacks_list = [checkpoint, tb]
 
-model.fit_generator(train_gen, validation_data=val_gen, steps_per_epoch=10, epochs=2, validation_steps=2, callbacks=callbacks_list)
+model.fit_generator(train_gen, validation_data=val_gen, steps_per_epoch=200, epochs=100, validation_steps=20, callbacks=callbacks_list)

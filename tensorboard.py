@@ -5,6 +5,7 @@ from tensorflow.python.keras import backend as K
 # from keras import backend as K
 # from keras.callbacks import Callback
 from tensorflow.python.keras.callbacks import Callback
+from tensorflow.python.summary import summary as tf_summary
 
 
 class TensorBoard(Callback):
@@ -35,7 +36,7 @@ class TensorBoard(Callback):
             The log file can become quite large when
             write_graph is set to True.
     '''
-    def __init__(self, log_dir='./logs', histogram_freq=0, write_graph=True, write_images=False, validation_data=None):
+    def __init__(self, log_dir='./logs', histogram_freq=0, write_graph=True, write_images=False, validation_data=None, batch_size=16):
         super(TensorBoard, self).__init__()
         # if K._BACKEND != 'tensorflow':
         #     raise RuntimeError('TensorBoard callback only works '
@@ -46,14 +47,17 @@ class TensorBoard(Callback):
         self.write_graph = write_graph
         self.write_images = write_images
         self.validation_data = validation_data
+        self.batch_size = batch_size
 
-    def _set_model(self, model):
+
+    def set_model(self, model):
         import tensorflow as tf
         # import keras.backend.tensorflow_backend as KTF
-        import tensorflow.python.keras.backend as KTF
+        # import tensorflow.python.keras.backend as KTF
 
         self.model = model
-        self.sess = KTF.get_session()
+        # self.sess = KTF.get_session()
+        self.sess = tf.keras.backend.get_session()
         if self.histogram_freq and self.merged is None:
             for layer in self.model.layers:
 
@@ -85,7 +89,8 @@ class TensorBoard(Callback):
 
     def gen_plot(self, epoch, logs):
         """Create a pyplot plot and save to buffer."""
-        x, y = next(self.validation_data)
+        self._valdata = next(self.validation_data)
+        x, y = self._valdata
         decoded_imgs = self.model.predict(x)
 
         n = 10
@@ -107,7 +112,81 @@ class TensorBoard(Callback):
         buf.seek(0)
         return buf
 
-    def on_epoch_end(self, epoch, logs={}):
+    def on_epoch_end(self, epoch, logs=None):
+        logs = logs or {}
+        import tensorflow as tf
+        import numpy as np
+
+        # Prepare the plot
+        plot_buf = self.gen_plot(epoch, logs)
+
+        # Convert PNG buffer to TF image
+        image = tf.image.decode_png(plot_buf.getvalue(), channels=4)
+
+        # Add the batch dimension
+        image = tf.expand_dims(image, 0)
+
+        # Add image summary
+        plot_summary_op = tf.summary.image('Epoch {epoch:02d}'.format(epoch=epoch, **logs), image)
+        plot_summary = self.sess.run(plot_summary_op)
+        self.writer.add_summary(plot_summary, global_step=epoch)
+
+
+        if not self.validation_data and self.histogram_freq:
+            raise ValueError('If printing histograms, validation_data must be '
+                             'provided, and cannot be a generator.')
+        if self.validation_data and self.histogram_freq:
+            if epoch % self.histogram_freq == 0:
+
+                val_data = list(self._valdata)
+                _sample_weights = np.ones(shape=self.batch_size)
+                val_data.append(_sample_weights)
+                tensors = (
+                        self.model.inputs + self.model.targets + self.model.sample_weights)
+
+                if self.model.uses_learning_phase:
+                    tensors += [K.learning_phase()]
+
+                assert len(val_data) == len(tensors)
+                val_size = val_data[0].shape[0]
+                i = 0
+                while i < val_size:
+                    step = min(self.batch_size, val_size - i)
+                    batch_val = []
+                    batch_val.append(val_data[0][i:i + step]
+                                     if val_data[0] is not None else None)
+                    batch_val.append(val_data[1][i:i + step]
+                                     if val_data[1] is not None else None)
+                    batch_val.append(val_data[2][i:i + step]
+                                     if val_data[2] is not None else None)
+                    if self.model.uses_learning_phase:
+                        # do not slice the learning phase
+                        batch_val = [x[i:i + step] if x is not None else None
+                                     for x in val_data[:-1]]
+                        batch_val.append(val_data[-1])
+                    else:
+                        batch_val = [x[i:i + step] if x is not None else None
+                                     for x in val_data]
+                    feed_dict = {}
+                    for key, val in zip(tensors, batch_val):
+                        if val is not None:
+                            feed_dict[key] = val
+                    result = self.sess.run([self.merged], feed_dict=feed_dict)
+                    summary_str = result[0]
+                    self.writer.add_summary(summary_str, epoch)
+                    i += self.batch_size
+
+        for name, value in logs.items():
+            if name in ['batch', 'size']:
+                continue
+            summary = tf_summary.Summary()
+            summary_value = summary.value.add()
+            summary_value.simple_value = value.item()
+            summary_value.tag = name
+            self.writer.add_summary(summary, epoch)
+        self.writer.flush()
+
+    def __on_epoch_end(self, epoch, logs={}):
         import tensorflow as tf
 
         # Prepare the plot
@@ -124,7 +203,7 @@ class TensorBoard(Callback):
         plot_summary = self.sess.run(plot_summary_op)
         self.writer.add_summary(plot_summary, global_step=epoch)
 
-        if self.model.validation_data and self.histogram_freq:
+        if self.validation_data and self.histogram_freq:
             if epoch % self.histogram_freq == 0:
                 # TODO: implement batched calls to sess.run
                 # (current call will likely go OOM on GPU)
@@ -133,7 +212,7 @@ class TensorBoard(Callback):
                     val_data = self.model.validation_data[:cut_v_data] + [0]
                     tensors = self.model.inputs + [K.learning_phase()]
                 else:
-                    val_data = self.model.validation_data
+                    val_data = self.validation_data
                     tensors = self.model.inputs
                 feed_dict = dict(zip(tensors, val_data))
                 result = self.sess.run([self.merged], feed_dict=feed_dict)

@@ -1,6 +1,5 @@
 from keras import backend as K
 from keras import optimizers
-from keras.engine import merge
 from keras.layers import Input, Convolution2D, UpSampling2D, MaxPooling2D, Dropout, Flatten, Dense, Reshape
 from keras.models import Model
 import numpy as np
