@@ -1,8 +1,10 @@
 import io
 
 import matplotlib.pyplot as plt
-from keras import backend as K
-from keras.callbacks import Callback
+from tensorflow.python.keras import backend as K
+# from keras import backend as K
+# from keras.callbacks import Callback
+from tensorflow.python.keras.callbacks import Callback
 
 
 class TensorBoard(Callback):
@@ -35,9 +37,9 @@ class TensorBoard(Callback):
     '''
     def __init__(self, log_dir='./logs', histogram_freq=0, write_graph=True, write_images=False, validation_data=None):
         super(TensorBoard, self).__init__()
-        if K._BACKEND != 'tensorflow':
-            raise RuntimeError('TensorBoard callback only works '
-                               'with the TensorFlow backend.')
+        # if K._BACKEND != 'tensorflow':
+        #     raise RuntimeError('TensorBoard callback only works '
+        #                        'with the TensorFlow backend.')
         self.log_dir = log_dir
         self.histogram_freq = histogram_freq
         self.merged = None
@@ -47,7 +49,8 @@ class TensorBoard(Callback):
 
     def _set_model(self, model):
         import tensorflow as tf
-        import keras.backend.tensorflow_backend as KTF
+        # import keras.backend.tensorflow_backend as KTF
+        import tensorflow.python.keras.backend as KTF
 
         self.model = model
         self.sess = KTF.get_session()
